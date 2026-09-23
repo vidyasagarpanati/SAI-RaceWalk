@@ -1,0 +1,42 @@
+# Injury risk-factor screening rules (S5). Section 3 of the report.
+#
+# PROVISIONAL SCREENING HEURISTICS defined by this pipeline. They are NOT validated
+# clinical thresholds and NOT literature benchmarks. They exist so the Low / Moderate /
+# High column is computed the same way every run instead of being chosen by a language
+# model. Tune them with your coach or physio. Every level in the report prints the
+# signal that produced it, so a change here is always visible.
+#
+# Each category lists signals. A signal is a key from the S5 "risk_signals" block.
+# The category level is the highest level any available signal reaches.
+# A category with no available signal is NOT ASSESSED and says why.
+
+version: 1
+status: PROVISIONAL
+
+categories:
+  knee_stress:
+    label: Knee stress
+    signals:
+      - {metric: flagged_stride_share_pct, moderate: 10, high: 30, unit: "% of strides"}
+      - {metric: loading_knee_min_asym_pct, moderate: 4, high: 8, unit: "% asymmetry"}
+    needs_views: [any]
+  hip_low_back:
+    label: Hip / low back
+    signals:
+      - {metric: pelvic_tilt_range_deg, moderate: 8, high: 12, unit: deg, views: [frontal]}
+      - {metric: trunk_incl_range_deg, moderate: 6, high: 10, unit: deg, views: [any]}
+      - {metric: pelvic_yaw_range_asym_pct, moderate: 10, high: 20, unit: "% asymmetry", views: [any]}
+  achilles_calf:
+    label: Achilles / calf
+    signals:
+      - {metric: ankle_range_asym_pct, moderate: 10, high: 20, unit: "% asymmetry", views: [any]}
+      - {metric: stance_asym_pct, moderate: 5, high: 10, unit: "% asymmetry", views: [any]}
+  ankle_stability:
+    label: Ankle stability
+    signals:
+      - {metric: rearfoot_angle_range_deg, moderate: 8, high: 14, unit: deg, views: [frontal]}
+      - {metric: rearfoot_angle_asym_pct, moderate: 15, high: 30, unit: "% asymmetry", views: [frontal]}
+  overuse_fatigue:
+    label: Overuse / fatigue
+    signals:
+      - {metric: max_abs_drift_pct, moderate: 6, high: 12, unit: "% change", views: [any]}

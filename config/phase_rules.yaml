@@ -1,0 +1,67 @@
+# Deterministic gait-event detection and screening thresholds (S4, S5).
+#
+# Every key here is read by src/racewalk/steps/s04_gait.py or s05_stats.py.
+# Nothing in this file is decorative. Foot heights are in LEG LENGTHS (hip to ankle,
+# summed segment lengths in the image) so they do not depend on camera distance.
+# Editing this file re-runs S4 onward only; pose estimation stays cached.
+#
+# Tuning procedure: run to S5, open runs/<run_id>/04_gait.json, read "signal_summary"
+# (percentiles of every driving signal on YOUR footage) and set thresholds from those
+# numbers. Do not tune by eye.
+#
+# The values below are PROVISIONAL DEFAULTS chosen so the detector works on a typical
+# 60 fps treadmill or track clip. They are pipeline screening parameters, not
+# judging rules and not literature benchmarks.
+
+version: 1
+
+contact:
+  ground_window_s: 2.0             # rolling window used to find each foot's ground level
+  ground_percentile: 95            # lowest foot position in the window is taken as ground
+  enter_frac_of_amplitude: 0.10    # foot height below this fraction of its own swing amplitude = in contact
+  exit_frac_of_amplitude: 0.20     # hysteresis: must rise above this to leave contact
+  min_amplitude_leg_lengths: 0.02  # smaller swing amplitude means the foot signal is unusable
+  min_contact_s: 0.12              # contact runs shorter than this are noise
+  min_swing_s: 0.08                # swing gaps shorter than this are merged into the contact
+  max_nan_gap_s: 0.10              # contact state survives landmark dropouts up to this long
+  min_stride_s: 0.60               # heel strike to next heel strike of the same leg
+  max_stride_s: 2.20
+
+phases:
+  initial_contact_s: 0.06          # window that starts at heel strike
+  mid_stance_half_window_s: 0.04   # window centred on the vertical (mid-stance) event
+  vertical_event: contralateral_foot_peak   # vertical = moment the opposite foot is highest
+
+screening:
+  # Straight-leg screen. Knee angle is measured in MediaPipe world space, so it works
+  # from any camera view, but a rear or front view can only SCREEN, not rule.
+  straight_knee_min_deg: 165       # loading-window minimum below this flags the stride
+  loading_window_start_after_hs_s: 0.05   # the contact detector fires slightly BEFORE the true heel
+                                   # strike, and the knee angle is still settling from swing. The
+                                   # screen starts this long after the detected heel strike so a late
+                                   # swing tail is not scored as a bent leg on the ground.
+  knee_smoothing_frames: 3         # the minimum is taken over a running mean of this many frames,
+                                   # so a single noisy frame cannot flag a stride
+  straight_knee_moderate_deficit_deg: 8    # deficit = threshold minus measured minimum
+  straight_knee_critical_deficit_deg: 18
+  min_flagged_strides_for_event: 1
+  event_merge_gap_s: 1.5           # flagged strides closer than this form one event
+  # Loss-of-contact screen. Both feet counted as airborne at the same time.
+  airborne_min_frames: 2           # candidate must last at least this many frames
+  flight_moderate_ms: 40
+  flight_critical_ms: 80
+  # Foot strike (side views only): toe-up pitch of the foot at initial contact, degrees.
+  heel_strike_toe_up_deg: 3
+  # Left-right asymmetry (symmetry index, percent) of step time, rolling window.
+  asymmetry_window_steps: 12
+  asymmetry_flag_pct: 6
+  asymmetry_moderate_pct: 10
+  asymmetry_critical_pct: 15
+  # Early-versus-late drift, percent change of the mean, last third against first third.
+  drift_flag_pct: 6
+  drift_moderate_pct: 10
+  drift_critical_pct: 18
+
+boundary_confidence:
+  hysteresis_frames: 3
+  min_key_frame_visible_landmarks: 20

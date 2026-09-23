@@ -1,0 +1,23 @@
+# Section 3 (injury risk) must be non-diagnostic. Any match blocks publication.
+# One pattern per line, case insensitive, matched as a whole word sequence.
+diagnosis
+diagnosed
+diagnostic
+you have
+suffers from
+is suffering
+patient
+pathology
+tendinitis
+tendinopathy
+patellofemoral pain syndrome
+shin splints
+stress fracture
+iliotibial band syndrome
+plantar fasciitis
+sprain
+strain injury
+requires treatment
+prescribe
+medical condition
+will cause

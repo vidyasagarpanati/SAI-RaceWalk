@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Walking Analysis Report - {{ v.athlete_name }}</title>
+<style>
+:root{--ink:#1d2330;--muted:#5d6678;--line:#dfe3ea;--bg:#f6f7fa;--card:#fff;--accent:#1f4e79;
+--hi:#1e7d4f;--me:#b7791f;--lo:#b8322a;--chip:#eef1f6}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.55 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+header.top{background:linear-gradient(120deg,#12324f,#1f4e79);color:#fff;padding:28px 32px}
+header.top h1{margin:0 0 4px;font-size:24px;letter-spacing:.3px}
+header.top .sub{opacity:.85;font-size:13px}
+nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;padding:6px 16px}
+nav a{display:inline-block;padding:6px 9px;margin:2px;border-radius:6px;color:var(--accent);text-decoration:none;font-size:12.5px}
+nav a:hover{background:var(--chip)}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px 24px;margin:18px 0}
+section h2{margin:0 0 12px;font-size:19px;color:var(--accent);border-bottom:2px solid var(--line);padding-bottom:8px}
+section h3{font-size:16px;margin:18px 0 8px}
+table{border-collapse:collapse;width:100%;margin:8px 0 14px;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#f0f3f8;font-weight:600}
+td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--chip);color:#334;margin-right:4px}
+.c-HIGH{background:#e3f4ec;color:var(--hi)}.c-MEDIUM{background:#fbf1de;color:var(--me)}.c-LOW{background:#fbe6e4;color:var(--lo)}
+.sev-CRITICAL,.lv-HIGH{background:#fbe6e4;color:var(--lo)}.sev-MODERATE,.lv-MODERATE{background:#fbf1de;color:var(--me)}
+.sev-MINOR,.lv-LOW{background:#e3f4ec;color:var(--hi)}.lv-NOT{background:#eef1f6;color:#445}
+.na{color:var(--muted);font-style:italic}
+.kv{display:grid;grid-template-columns:220px 1fr;gap:4px 14px}
+.kv div:nth-child(odd){color:var(--muted)}
+.frame{margin:10px 0 16px}
+.frame img{width:100%;height:auto;border-radius:6px;border:1px solid var(--line)}
+.frame .cap{font-size:12.5px;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.na-box{background:#fdf3f2;border:1px solid #f0c5c0;border-radius:8px;padding:18px;margin:8px 0}
+.na-box b{color:var(--lo)}
+.banner{background:#fff4e5;border:1px solid #f0d3a5;border-left:6px solid var(--me);border-radius:8px;padding:14px 18px;margin:18px 0}
+.note{background:#eef4fa;border:1px solid #c9dbee;border-left:6px solid var(--accent);border-radius:8px;padding:12px 16px;margin:12px 0}
+.generic{background:#f4f4f6;border:1px dashed #b9c0cc;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13px;color:var(--muted)}
+.event{border-left:6px solid var(--accent);padding-left:14px;margin:22px 0}
+.prio{border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:12px 0}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+@media (max-width:720px){.kv{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}header.top{padding:20px 16px}section{padding:16px}}
+@media print{nav{display:none}section{break-inside:avoid-page}}
+</style>
+</head>
+<body>
+{% macro conf(c) %}{% if c %}<span class="chip c-{{ c }}">{{ c }}</span>{% endif %}{% endmacro %}
+{% macro lvl(l) %}{% if l %}<span class="chip">[{{ l }}]</span>{% endif %}{% endmacro %}
+{% macro sev(s) %}{% if s %}<span class="chip sev-{{ s }}">{{ s }}</span>{% endif %}{% endmacro %}
+{% macro txt(t) %}{% if t is none or t == "" %}<span class="na">Not available from supplied video.</span>{% elif "NOT RELIABLY ASSESSABLE" in t or "NOT PROVIDED" in t %}<span class="na">{{ t }}</span>{% else %}{{ t }}{% endif %}{% endmacro %}
+
+<header class="top">
+  <h1>RACE WALKING VIDEO &amp; BIOMECHANICS ANALYSIS REPORT</h1>
+  <div class="sub">{{ v.athlete_name }} &middot; {{ v.session_date }} &middot; report {{ v.version_label }} &middot; run {{ v.run_id }}</div>
+</header>
+<nav>{% for s in v.order %}<a href="#sec-{{ s.key }}">{{ s.number }}. {{ s.title|title }}</a>{% endfor %}<a href="#sec-prov">Provenance</a></nav>
+<main>
+{% if v.partial %}
+<div class="banner"><b>PARTIAL REPORT.</b> {{ v.failed|length }} section(s) could not be produced and are marked NOT AVAILABLE
+below, with the reason. Every other section is complete and verified. Nothing has been guessed to fill a gap.</div>
+{% endif %}
+
+<section id="sec-info">
+  <h2>SESSION INFORMATION</h2>
+  <div class="kv">{% for k, val in v.info %}<div>{{ k }}</div><div>{{ txt(val) }}</div>{% endfor %}</div>
+  {% if v.video_name %}<p><b>Annotated video:</b> <code>{{ v.video_name }}</code> (in the outputs folder, next to this report). Per-event clips are in the run folder under <code>07_video</code>.</p>{% endif %}
+  <div class="note"><b>Note.</b> {{ v.note }}</div>
+</section>
+
+{% for s in v.order %}
+<section id="sec-{{ s.key }}">
+<h2>{{ s.number }}. {{ s.title }}</h2>
+{% set k = s.key %}
+
+{% if v.failed.get(k) %}
+  <div class="na-box"><b>NOT AVAILABLE (section failed).</b> This section could not be produced after all attempts.
+  Reason: {{ v.failed[k] }}. It is left empty rather than filled with unverified content. Rerun with
+  <code>racewalk run --video &lt;path&gt; --from S8</code> to try again.</div>
+
+{% elif k == "s01" %}
+  <p>{{ txt(v.n.s01_timestamps.summary) }}</p>
+  {% if v.events %}
+  <table><tr><th>#</th><th>Timestamp</th><th>Flag</th><th>Severity</th><th>Value</th><th>Confidence</th><th>What was flagged</th></tr>
+  {% for e in v.events %}<tr><td>{{ e.id }}</td><td class="num">{{ e.ts }}</td><td>{{ e.type }}</td><td>{{ sev(e.severity) }}</td>
+  <td class="num">{{ e.value }}</td><td>{{ conf(e.confidence) }}</td><td>{{ txt(e.what) }}</td></tr>{% endfor %}</table>
+  {% if v.events_summary.dropped_low_priority %}<p class="na">{{ v.events_summary.dropped_low_priority }} lower-priority flag(s) were left out of this table; the annotated video shows all of them.</p>{% endif %}
+  {% for e in v.events %}
+  <div class="event" style="border-color:{{ e.color }}">
+    <h3>Event {{ e.id }}: {{ e.type }} {{ sev(e.severity) }}</h3>
+    <p class="na">{{ e.ts }} &middot; {{ e.value }}</p>
+    <p><b>Why it matters:</b> {{ txt(e.why) }}</p>
+    <p><b>Cue:</b> {{ txt(e.cue) }}</p>
+    {% for f in e.frames %}<div class="frame"><img alt="Annotated frame, event {{ e.id }}" src="data:image/jpeg;base64,{{ f.b64 }}"><div class="cap">{{ f.label }} &middot; t = {{ f.t }} s &middot; frame {{ f.frame }}</div></div>{% endfor %}
+    {% if not e.frames %}<p class="na">No screenshot for this event (only the highest-severity events of each type are shown); see the annotated video.</p>{% endif %}
+  </div>{% endfor %}
+  {% else %}<p class="na">No event was flagged by the screening rules.</p>{% endif %}
+
+{% elif k == "s02" %}
+  <table><tr><th>Parameter</th><th>Status (rule-based)</th><th>Observation</th><th>Why it matters</th><th>Confidence</th></tr>
+  {% for r in v.tech_rows %}<tr><td><b>{{ r.parameter }}</b></td><td>{{ txt(r.status) }} {{ conf(r.ceiling) }}</td><td>{{ txt(r.obs) }}</td><td>{{ txt(r.why) }}</td><td>{{ conf(r.conf) }}</td></tr>{% endfor %}</table>
+  <h3>Measured values across strides</h3>
+  <table><tr><th>Measure</th><th>Mean</th><th>SD</th><th>Min</th><th>Max</th><th>Confidence</th></tr>
+  {% for r in v.stats_rows %}<tr><td>{{ r.name }}</td><td class="num">{{ r.mean }}</td><td class="num">{{ r.sd }}</td><td class="num">{{ r.min }}</td><td class="num">{{ r.max }}</td><td>{{ conf(r.conf) }}</td></tr>{% endfor %}</table>
+  <h3>Reference comparison</h3>
+  <table><tr><th>Variable</th><th>Athlete (mean)</th><th>Reference</th></tr>
+  {% for b in v.bench_rows %}<tr><td>{{ b.variable }}</td><td class="num">{{ b.athlete }}</td><td>{{ txt(b.reference) }}</td></tr>{% endfor %}</table>
+  <h3>Reference stride</h3>
+  <p class="na">One representative stride per leg, one frame per phase. Boundary detection in the video may differ by a frame or two.</p>
+  {% for lg, frames in v.ref_frames.items() %}{% if frames %}<h3>{{ "Left" if lg == "L" else "Right" }} leg, stride {{ frames[0].stride }}</h3>
+  <div class="grid2">{% for f in frames %}<div class="frame"><img alt="{{ f.phase }}" src="data:image/jpeg;base64,{{ f.b64 }}"><div class="cap">{{ f.phase }} &middot; t = {{ f.t }} s &middot; frame {{ f.frame }}</div></div>{% endfor %}</div>{% endif %}{% endfor %}
+
+{% elif k == "s03" %}
+  <div class="generic">Levels are provisional screening heuristics ({{ v.risk_status }}), computed the same way every run. They are not clinical thresholds and nothing here is a diagnosis.</div>
+  <table><tr><th>Category</th><th>Level</th><th>Driving signal</th><th>Rationale</th><th>Potential risk factor</th><th>Corrective focus</th><th>Confidence</th></tr>
+  {% for r in v.risks %}<tr><td><b>{{ r.label }}</b></td><td><span class="chip lv-{{ r.level.split(' ')[0] }}">{{ r.level }}</span></td><td>{{ r.driver }}</td>
+  <td>{{ txt(r.rationale) }}</td><td>{{ txt(r.concern) }}</td><td>{{ txt(r.focus) }}</td><td>{{ conf(r.conf) }}</td></tr>{% endfor %}</table>
+
+{% elif k == "s04" %}
+  <h3>Strengths</h3>
+  <ul>{% for s in v.strengths %}<li><span class="chip">{{ s.id }}</span>{{ conf(s.confidence) }} <b>{{ s.strength }}</b>: {{ txt(s.evidence) }}</li>{% endfor %}</ul>
+  <h3>Weaknesses and timestamped corrections</h3>
+  <table><tr><th>Rank</th><th>Timestamp</th><th>Issue</th><th>Evidence</th><th>Likely cause</th><th>Correction</th><th>Priority</th></tr>
+  {% for w in v.weak %}<tr><td>{{ w.rank }} <span class="chip">{{ w.id }}</span></td><td class="num">{{ w.timestamp }}</td><td>{{ w.weakness }}</td><td>{{ txt(w.evidence) }}</td><td>{{ txt(w.likely_cause) }}</td><td>{{ txt(w.correction) }}</td><td>{{ sev(w.priority) }}</td></tr>{% endfor %}</table>
+
+{% elif k == "s05" %}
+  <table><tr><th>Metric</th><th>Value (measured)</th><th>Reading</th><th>Note</th><th>Confidence</th></tr>
+  {% for r in v.speed_rows %}<tr><td><b>{{ r.metric }}</b></td><td>{{ txt(r.value) }}</td><td>{{ txt(r.reading) }}</td><td>{{ txt(r.note) }}</td><td>{{ conf(r.conf) }}</td></tr>{% endfor %}</table>
+  <table><tr><th>Additional measures</th><th>Value</th></tr>{% for a, b in v.extra_speed %}<tr><td>{{ a }}</td><td class="num">{{ b }}</td></tr>{% endfor %}</table>
+  <p>{{ txt(v.n.s05_speed.summary) }}</p>
+  {% if v.drift.available %}<h3>Early versus late in the clip</h3>
+  <table><tr><th>Measure</th><th>Early</th><th>Late</th><th>Change</th><th>Adverse?</th></tr>
+  {% for name, d in v.drift.metrics.items() %}<tr><td>{{ name.replace("_", " ") }}</td><td class="num">{{ d.early }}</td><td class="num">{{ d.late }}</td><td class="num">{{ d.change_pct }}%</td><td>{{ "yes" if d.adverse else "no" }}</td></tr>{% endfor %}</table>
+  {% else %}<p class="na">{{ v.drift_status }}</p>{% endif %}
+
+{% elif k == "s06" %}
+  <h3>Immediate corrections</h3>
+  <table><tr><th>Rank</th><th>Addresses</th><th>Cue</th><th>Drill</th><th>Dose</th><th>Frequency</th><th>Success metric</th></tr>
+  {% for i in v.plan.immediate|sort(attribute="rank") %}<tr><td>{{ i.rank }}</td><td><span class="chip">{{ i.issue_ref }}</span></td><td>{{ i.cue }}</td><td>{{ i.drill }}</td><td>{{ i.sets }}</td><td>{{ i.frequency }}</td><td>{{ txt(i.success_metric) }}</td></tr>{% endfor %}</table>
+  <h3>Twelve-week plan</h3>
+  {% for p in v.plan.phases %}<div class="prio"><b>{{ p.phase }}</b>: {{ txt(p.focus) }}<ul>{% for s in p.sessions %}<li><b>{{ s.day }}:</b> {{ s.content }}</li>{% endfor %}</ul></div>{% endfor %}
+  <h3>Milestones (tracked against your own baseline)</h3>
+  <table><tr><th>When</th><th>Track</th><th>Baseline now</th><th>Direction</th><th>Tracked by</th></tr>
+  {% for m in v.plan.milestones %}<tr><td>{{ m.when }}</td><td><code>{{ m.metric_key }}</code></td><td class="num">{{ m.baseline }}</td><td>{{ m.target }}</td><td>{{ m.tracked_by }}</td></tr>{% endfor %}</table>
+
+{% elif k == "s07" %}
+  <h3>Targeted to the weaknesses found</h3>
+  <table><tr><th>Area</th><th>Exercise</th><th>Dose</th><th>Purpose</th><th>Addresses</th></tr>
+  {% for e in v.n.s07_strength.exercises %}<tr><td>{{ e.area }}</td><td>{{ e.exercise }}</td><td>{{ e.dose }}</td><td>{{ txt(e.purpose) }}</td><td>{% for x in e.addresses %}<span class="chip">{{ x }}</span>{% endfor %}</td></tr>{% endfor %}</table>
+  <p>{{ txt(v.n.s07_strength.notes) }}</p>
+  <div class="generic"><b>Generic guidance.</b> {{ v.guidance.source_note }}</div>
+  <h3>Baseline conditioning</h3>
+  <table><tr><th>Area</th><th>Exercise</th><th>Dose</th><th>Purpose</th></tr>{% for e in v.guidance.strength_baseline %}<tr><td>{{ e.area }}</td><td>{{ e.exercise }}</td><td>{{ e.dose }}</td><td>{{ e.purpose }}</td></tr>{% endfor %}</table>
+  <h3>Daily mobility</h3>
+  <table><tr><th>Item</th><th>Dose</th><th>Why</th></tr>{% for e in v.guidance.mobility_daily %}<tr><td>{{ e.item }}</td><td>{{ e.dose }}</td><td>{{ e.why }}</td></tr>{% endfor %}</table>
+  <h3>Preventive notes</h3><ul>{% for x in v.guidance.preventive_notes %}<li>{{ x }}</li>{% endfor %}</ul>
+
+{% elif k == "s08" %}
+  <div class="generic"><b>Generic guidance.</b> {{ v.guidance.source_note }} Review with a qualified sports dietitian, physiotherapist or coach.</div>
+  <h3>Monitoring</h3><ul>{% for x in v.guidance.monitoring %}<li>{{ x }}</li>{% endfor %}</ul>
+  <h3>Nutrition</h3><table><tr><th>When</th><th>Advice</th></tr>{% for x in v.nutrition %}<tr><td>{{ x.timing }}</td><td>{{ x.advice }}</td></tr>{% endfor %}</table>
+  <h3>Recovery</h3><ul>{% for x in v.guidance.recovery %}<li>{{ x }}</li>{% endfor %}</ul>
+  <h3>Psychology</h3><ul>{% for x in v.guidance.psychology %}<li>{{ x }}</li>{% endfor %}</ul>
+  <h3>Periodization</h3><table><tr><th>Block</th><th>Duration</th><th>Focus</th><th>Volume</th><th>Intensity</th></tr>
+  {% for x in v.guidance.periodization %}<tr><td>{{ x.block }}</td><td>{{ x.duration }}</td><td>{{ x.focus }}</td><td>{{ x.volume }}</td><td>{{ x.intensity }}</td></tr>{% endfor %}</table>
+
+{% elif k == "s09" %}{% set q = v.n.s09_limitations %}
+  <ul>{% for c in v.caveats %}<li>{{ c }}</li>{% endfor %}</ul>
+  <h3>This video</h3>
+  <table>{% for f in ["camera","lighting","occlusion","motion_blur","clothing"] %}<tr><th style="width:24%">{{ f|replace("_"," ")|capitalize }}</th><td>{{ txt(q[f]) }}</td></tr>{% endfor %}</table>
+  <ul>{% for l in q.additional %}<li>{{ l }}</li>{% endfor %}</ul>
+  <p><b>Overall analysis confidence:</b> {{ conf(v.overall_conf) }} <span class="na">{{ v.overall_rule }}</span></p>
+  <p class="na">Camera ceilings applied: {% for name, c in v.camera_caps.items() %}{{ name }} {{ c }}; {% endfor %}</p>
+  {% if v.view_check %}<p class="na">{{ v.view_check }}</p>{% endif %}
+{% endif %}
+</section>
+{% endfor %}
+
+<section id="sec-prov">
+  <h2>EVIDENCE, VERIFICATION AND PROVENANCE</h2>
+  <h3>Verification checklist</h3>
+  <table><tr><th>Check</th><th>Status</th></tr>{% for c in v.checklist %}<tr><td>{{ c.check }}</td><td>{{ c.status }}</td></tr>{% endfor %}</table>
+  <p>Confidence ratings across the written sections: HIGH {{ v.conf_counts.HIGH }}, MEDIUM {{ v.conf_counts.MEDIUM }}, LOW {{ v.conf_counts.LOW }}.</p>
+  <h3>Provenance</h3>
+  <table>{% for a, b in v.provenance %}<tr><th style="width:24%">{{ a }}</th><td>{{ b }}</td></tr>{% endfor %}</table>
+</section>
+<footer>Generated {{ v.generated }} by the SAI RaceWalk pipeline. Python measures; the model only writes prose over a frozen evidence file.</footer>
+</main>
+</body>
+</html>

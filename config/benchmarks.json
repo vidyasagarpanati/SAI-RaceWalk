@@ -1,0 +1,40 @@
+{
+  "_README": [
+    "The report may only use reference values that appear in this file AND carry a source.",
+    "If a variable has no usable entry, the report prints 'Individualized assessment required'.",
+    "Nothing is inferred and nothing is remembered from the language model.",
+    "",
+    "SHIPPED EMPTY ON PURPOSE. Populating this is a sports-science task, not a coding task.",
+    "An entry with source null, status NEEDS_SOURCE, or no measure/phase mapping is rejected",
+    "by S5 and listed in the report. Example: a pelvic-rotation reference range that appears",
+    "in an earlier hand-made report must be traced to a citation before it goes in here.",
+    "",
+    "evidence_class must be one of: literature, coaching_convention, athlete_baseline.",
+    "measure must be a measure name the pipeline produces, for example 'pelvic_yaw_range_deg'.",
+    "scope is 'stride' (per-stride metric) and leg is 'both' unless the entry is leg-specific."
+  ],
+  "version": 1,
+  "updated": "2026-09-23",
+  "entries": [
+    {
+      "id": "PELVIC_ROTATION_RANGE_PLACEHOLDER",
+      "variable": "pelvic_rotation_range_deg",
+      "measure": "pelvic_yaw_range_deg",
+      "scope": "stride",
+      "population": "race walkers, competition pace",
+      "target": null,
+      "range": null,
+      "units": "degrees",
+      "evidence_class": "coaching_convention",
+      "source": null,
+      "status": "NEEDS_SOURCE",
+      "note": "Placeholder. Fill target/range AND a citable source, or delete. Until then Section 2 prints 'Individualized assessment required' for pelvic rotation."
+    }
+  ],
+  "candidate_sources_to_review": [
+    "World Athletics Technical Rules, Rule 54 (race walking) for the definition of legal technique",
+    "World Athletics / IAAF Race Walking coaching and judging manuals",
+    "Hanley B., Bissas A., Merlino S. and colleagues, biomechanics reports on elite race walking (World Championships and Olympic Games)",
+    "Cairns M.A., Burdett R.G., Pisciotta J.C., Simon S.R., a biomechanical analysis of racewalking gait (Med Sci Sports Exerc)"
+  ]
+}

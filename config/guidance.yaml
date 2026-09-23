@@ -1,0 +1,56 @@
+# Generic reference guidance for Sections 7 and 8 of the report.
+#
+# This text is NOT derived from the video and NOT written by the language model. It is
+# carried over from the race walking analysis prompt template and rendered as written,
+# under a label that says so. Edit it here; the change is part of the config hash and is
+# visible in the report provenance. Verify nutrition and recovery items with a qualified
+# sports dietitian or physiotherapist before relying on them.
+#
+# {mass_kg} and {carb_pre_g} are filled from session.body_mass_kg when it is supplied.
+# When it is not, the per-kilogram wording is shown without a personal total.
+
+version: 1
+source_note: "Generic guidance carried over from the analysis prompt template. Not derived from this video."
+
+strength_baseline:
+  - {area: "Core / anterior chain", exercise: "Plank variation + dead bug", dose: "3 x 20 dead bug + 30 s side plank per side", purpose: "Anti-extension and pelvic stability"}
+  - {area: "Posterior chain", exercise: "Romanian deadlift or hip thrust", dose: "4 x 8-10", purpose: "Hamstring strength, hip extension"}
+  - {area: "Ankle stiffness / power", exercise: "Pogo hops and single-leg hops", dose: "3 x 20 pogo + 3 x 15 per side", purpose: "Reactive stiffness, Achilles preparation"}
+
+mobility_daily:
+  - {item: "Hip flexor stretch (kneeling lunge)", dose: "60 s per side", why: "Keeps hip extension available for stride length"}
+  - {item: "Hamstring foam roll + dynamic swings", dose: "3 min roller + 2 min swings", why: "Posterior chain pliability"}
+  - {item: "Calf / ankle dorsiflexion wall drill", dose: "2 min per side", why: "Ankle range for a heel-first contact and Achilles load"}
+  - {item: "Thoracic spine rotation (foam roller)", dose: "3 min total", why: "Supports upright arm swing and shoulder relaxation"}
+
+preventive_notes:
+  - "Include eccentric quadriceps loading (slow step-downs) to condition the tendons for the repeated impact of race walking."
+  - "Add lateral and frontal plane work (banded side steps, single-leg balance) for hip stability and knee alignment."
+  - "Re-assess technique on video every four weeks, from the same rear and side positions, so changes are comparable."
+
+monitoring:
+  - "Use a GPS watch or a shoe-mounted accelerometer to check cadence, ground contact time and vertical oscillation against the video-derived values."
+  - "Compare video cadence with wearable cadence to cross-validate both."
+  - "Log perceived exertion (RPE 1-10) beside pace to find an individual lactate-threshold walking speed."
+
+nutrition:
+  - {timing: "Pre-session (2-3 h before)", advice: "Carbohydrate-rich meal, about 2 g of carbohydrate per kg of body mass{carb_pre_note}."}
+  - {timing: "In-session (over 60 min)", advice: "Electrolytes about every 45 min and 30-60 g of carbohydrate per hour from gel or drink."}
+  - {timing: "Post-session (within 30 min)", advice: "Carbohydrate to protein about 3:1 or 4:1, for example a banana and a protein shake."}
+
+recovery:
+  - "Active recovery walks below 60 percent of maximum pace on off days, 20-30 min."
+  - "Sleep 7-9 hours a night; elevate the legs for 10-15 min after heavy sessions."
+  - "Cold-water immersion at 10-12 C for 10-15 min after race-pace simulations or heavy load weeks, if it suits the athlete."
+  - "Compression garments for the lower legs after training, to support venous return."
+
+psychology:
+  - "Break a session into segments, each with one technique cue at the checkpoint."
+  - "Rehearse race-day conditions at the same time of day as the target event."
+  - "Build a short cue-word ladder for technical breakdown, for example: hips, straight, swing, relax."
+
+periodization:
+  - {block: "General preparation", duration: "4-6 weeks", focus: "Aerobic base and technique correction", volume: "+10-20% per week", intensity: "All walks below RPE 7.5 (Zone 2)"}
+  - {block: "Specific preparation", duration: "4-6 weeks", focus: "Race-pace capacity and strength work", volume: "Base volume maintained", intensity: "1-2 speed sessions per week"}
+  - {block: "Competition", duration: "2-4 weeks", focus: "Taper and peak performance", volume: "-30% to -50%", intensity: "Sharpening intensity only"}
+  - {block: "Transition", duration: "2-4 weeks", focus: "Active rest and cross-training", volume: "Significant reduction", intensity: "Low RPE, no racing"}

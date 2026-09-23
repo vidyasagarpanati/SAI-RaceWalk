@@ -1,0 +1,22 @@
+{
+  "athlete_name": "Athlete Name",
+  "age": null,
+  "gender": null,
+  "level": null,
+  "discipline": "20 km race walk",
+  "setting": "treadmill",
+  "camera_view": "rear",
+  "camera_distance_m": null,
+  "treadmill_speed_kmh": null,
+  "body_mass_kg": null,
+  "session_date": null,
+  "declared_frame_rate": null,
+  "additional_data": [],
+  "notes": "",
+  "manual_event_overrides": null,
+  "wearables": {
+    "gps_file": null,
+    "heart_rate_file": null,
+    "imu_file": null
+  }
+}

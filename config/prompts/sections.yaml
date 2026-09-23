@@ -1,0 +1,92 @@
+# One instruction block per model call, condensed from the race walking analysis prompt
+# template. The first five blocks explain results that Python already decided.
+# Editing a block regenerates only that section (prompts are part of S8's cache key).
+
+s09_limitations: |
+  Describe what limits this analysis, from the CONTEXT and the attached frame if there is one.
+  camera: the camera view and what it can and cannot show for the straight-leg and contact
+  rules. lighting, occlusion, motion_blur, clothing: what is visible in the frame, or write
+  NOT RELIABLY ASSESSABLE FROM AVAILABLE VIDEO when no image is attached.
+  additional: up to six other specific limits: frame rate against contact detection, single
+  camera depth, treadmill versus overground, no wearable data. State facts, do not repeat the
+  fixed caveats that the report prints itself (judging rules, no medical diagnosis).
+
+s01_timestamps: |
+  Section 1, Timestamps of Interest. CONTEXT.events lists every flagged event with its type,
+  severity and confidence, decided by rules. Write exactly one entry per event, in event_id
+  order.
+  what: what was flagged, citing the event's own values (start, end, value, n_strides) as
+  {{eventN.start_t_s}}, {{eventN.end_t_s}}, {{eventN.value}}, {{eventN.n_strides}}.
+  why_it_matters: the rule or performance consequence in one sentence, without naming a
+  penalty. coaching_cue: one short, specific, actionable cue.
+  summary: two sentences on the overall pattern of flagged events. If there are none, say so
+  and say what the screen could not see.
+  A STRAIGHT_LEG event is a screen on knee angle; a CONTACT event is both feet reading as off
+  the ground at once. Both are pose-based and must be phrased as possible, not proven.
+
+s02_technique: |
+  Section 2, Technique Breakdown. Write one row for each of the six parameters. The status of
+  each row was decided by rules and is in CONTEXT.technique_status: your observation must be
+  consistent with it. Where the status says NOT RELIABLY ASSESSABLE, the observation must say
+  exactly that and nothing more.
+  observation: what the measurements show, citing keys. For pelvic rotation, torso posture and
+  stride, say what is measured and how consistent it is (SD, CV), never whether it is
+  "good" or "ideal": no benchmark exists unless the EVIDENCE has one.
+  why_it_matters: the biomechanical reason this parameter matters for race walking.
+  confidence must not exceed confidence_ceiling for that parameter.
+
+s03_injury: |
+  Section 3, Injury Risk Assessment. Write one entry for each of the five categories. The level
+  of each was decided by screening rules and is in CONTEXT.injury_levels: explain it, do not
+  change it. Where the level is NOT ASSESSED, rationale must be exactly
+  NOT RELIABLY ASSESSABLE FROM AVAILABLE VIDEO.
+  rationale: which measured signals drive the level, citing keys from the risk.* and asym.* and
+  drift.* families.
+  possible_concern: a "potential movement-related risk factor" in plain words. Never name a
+  diagnosis, a tissue injury or a syndrome.
+  corrective_focus: one preventive or corrective focus area.
+  confidence must not exceed confidence_ceiling for that category.
+
+s04_comparison: |
+  Section 4, Comparison to Ideal Form. Two lists.
+  strengths (2 to 6): things the measurements show working well, ids S1, S2, ... Each cites
+  evidence. A strength needs positive evidence; an absence of a flag is not a strength unless
+  the metric was reliably measured.
+  weaknesses (2 to 6): ranked issues, ids W1, W2, ... rank 1 is the most important. Each names
+  its likely cause, a correction, a priority (CRITICAL, MODERATE, MINOR), and a timestamp_key:
+  the start key of the flagged event that shows it, or NOT ESTABLISHED if no event does.
+  Every MODERATE or CRITICAL flagged event must be shown by at least one weakness.
+  Compare against the athlete's own measured values and the rules of race walking. Do not
+  compare against an ideal number: there is none in the EVIDENCE.
+
+s05_speed: |
+  Section 5, Speed and Efficiency Metrics. Write one row for each of Pace, Cadence, Step and
+  stride length, Vertical oscillation, Efficiency. The numbers themselves are printed by the
+  report from the evidence; your reading and note explain them.
+  Pace and step or stride length in metres exist only if CONTEXT.speed_provided is true. If it
+  is false, Pace must say NOT PROVIDED and must not be estimated.
+  Efficiency: no energy or force data exists, so say what the video can and cannot show
+  (vertical oscillation, cadence consistency, arm-swing symmetry) and mark the rest
+  NOT RELIABLY ASSESSABLE FROM AVAILABLE VIDEO.
+  summary: two sentences.
+
+s06_training: |
+  Section 6, Coaching Suggestions and Training Plan, built on the ranked weaknesses in
+  s04_comparison.
+  immediate (3 to 5): ranked corrections. issue_ref is a weakness id. cue is a short coaching
+  cue, drill a named drill, sets a dose such as "3 x 40 m", frequency such as "3 sessions a
+  week", success_metric how progress is tracked (cite a KEY, not a target number).
+  The top two ranked weaknesses must each have an immediate correction.
+  phases: exactly three blocks, Weeks 1-4, Weeks 5-8, Weeks 9-12. focus is the technical theme.
+  sessions are Session A, B and C with a training dose in content. Doses (minutes, distances,
+  repetitions) are allowed; degrees, percent, cadence or speed targets are not.
+  milestones: one per block. metric_key is an evidence key already in the EVIDENCE list that
+  the athlete should track. target describes the direction of change relative to the athlete's
+  own baseline ("straighter than the baseline value"), never an absolute reference number.
+
+s07_strength: |
+  Section 7, Strength and Conditioning Suggestions, targeted at the ranked weaknesses in
+  s04_comparison. 4 to 8 exercises. area is the body region or quality, exercise is the named
+  exercise, dose is sets and repetitions or time, purpose says which weakness it addresses and
+  why, addresses lists weakness ids. Do not repeat the generic baseline programme, which the
+  report prints separately. notes: one sentence.
