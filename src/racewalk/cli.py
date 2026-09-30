@@ -61,13 +61,22 @@ def cmd_init_session(args) -> int:
     cfg = _bootstrap(args.root)
     video = Path(args.video)
     target = _session_path(cfg, video, args.session)
-    if target.exists() and not args.force:
-        print(f"Already exists: {target}\nPass --force to overwrite.")
-        return 1
-    template = json.loads((cfg.root / "session.example.json").read_text(encoding="utf-8"))
-    template["athlete_name"] = args.athlete or video.stem
+    if target.exists():
+        if not args.force:
+            print(f"Already exists: {target}\nPass --force to update it (existing fields you already "
+                  f"filled in, like camera_view, are kept; only --athlete and --distance-m are overwritten "
+                  f"if given).")
+            return 1
+        base = json.loads(target.read_text(encoding="utf-8"))
+    else:
+        base = json.loads((cfg.root / "session.example.json").read_text(encoding="utf-8"))
+        base["athlete_name"] = args.athlete or video.stem
+    if args.athlete:
+        base["athlete_name"] = args.athlete
+    if args.distance_m is not None:
+        base["distance_walked_m"] = args.distance_m
     with io_guard.guarded_open(target, "w", encoding="utf-8") as fh:
-        json.dump(template, fh, indent=2)
+        json.dump(base, fh, indent=2)
     print(f"Wrote {target}\nEdit it, then run:  racewalk run --video \"{video}\"")
     return 0
 
@@ -332,6 +341,11 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--video", required=True)
     i.add_argument("--session")
     i.add_argument("--athlete")
+    i.add_argument("--distance-m", dest="distance_m", type=float,
+                   help="Distance the athlete covered over the whole video, in metres. Enables "
+                        "average speed (distance / clip duration) in the report and live overlay, "
+                        "unless treadmill_speed_kmh is also set, which takes priority. Optional; "
+                        "if omitted, speed is reported as NOT PROVIDED.")
     i.add_argument("--force", action="store_true")
     i.set_defaults(func=cmd_init_session)
 

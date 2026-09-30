@@ -173,8 +173,22 @@ def run(ctx: Context) -> StepResult:
     # ---- session -------------------------------------------------------------
     probe = ingest["probe"]
     athlete = ingest["session"]
-    speed = athlete.get("treadmill_speed_kmh")
-    speed = float(speed) if isinstance(speed, (int, float)) and speed > 0 else None
+    duration_raw = float(probe.get("duration_s") or 0)
+
+    # Speed: a declared treadmill belt speed is exact and wins. Otherwise, if the operator
+    # supplied the distance the athlete covered over the clip (racewalk init-session
+    # --distance-m), speed is distance / clip duration. Never estimated from the picture.
+    treadmill_speed = athlete.get("treadmill_speed_kmh")
+    treadmill_speed = float(treadmill_speed) if isinstance(treadmill_speed, (int, float)) and treadmill_speed > 0 else None
+    distance_m = athlete.get("distance_walked_m")
+    distance_m = float(distance_m) if isinstance(distance_m, (int, float)) and distance_m > 0 else None
+    speed, speed_source = None, None
+    if treadmill_speed is not None:
+        speed, speed_source = treadmill_speed, "treadmill belt speed (declared)"
+    elif distance_m is not None and duration_raw > 0:
+        speed = distance_m / duration_raw * 3.6
+        speed_source = "distance walked over the clip duration (declared distance)"
+
     mass = athlete.get("body_mass_kg")
     mass = float(mass) if isinstance(mass, (int, float)) and mass > 0 else None
     session = {
@@ -188,7 +202,7 @@ def run(ctx: Context) -> StepResult:
         "pose_estimation": "MediaPipe Pose Landmarker (full, 33 landmarks), VIDEO mode, CPU",
         "analysis_method": "Deterministic computer-vision pipeline: frame decode, pose estimation, "
                            "kinematics, rule-based gait events, descriptive statistics",
-        "speed_kmh": speed,
+        "speed_kmh": _r(speed, 2), "speed_source": speed_source, "distance_walked_m": distance_m,
     }
     ev("session.measured_fps", session["measured_fps"], "fps", "HIGH")
     ev("session.analysis_fps", fps, "fps", "HIGH")
@@ -197,7 +211,8 @@ def run(ctx: Context) -> StepResult:
     ev("session.n_strides_left", session["n_strides_left"], "strides", "HIGH")
     ev("session.n_strides_right", session["n_strides_right"], "strides", "HIGH")
     ev("session.n_steps", session["n_steps"], "steps", "HIGH")
-    ev("session.speed_kmh", speed, "km/h", "HIGH")
+    ev("session.speed_kmh", session["speed_kmh"], "km/h", "HIGH")
+    ev("session.distance_walked_m", distance_m, "m", "HIGH")
     ev("session.body_mass_kg", mass, "kg", "HIGH")
 
     # ---- quality and overall confidence ----------------------------------------
@@ -457,6 +472,9 @@ def run(ctx: Context) -> StepResult:
     ev("gait.flight_max_ms", gait_block["flight_max_ms"], "ms", fcap)
     if speed:
         mps = speed / 3.6
+        gait_block["average_speed_kmh"] = _r(speed, 2)
+        gait_block["speed_source"] = speed_source
+        ev("gait.average_speed_kmh", gait_block["average_speed_kmh"], "km/h", "HIGH")
         gait_block["pace_min_per_km"] = _r(60.0 / speed, 2)
         ev("gait.pace_min_per_km", gait_block["pace_min_per_km"], "min/km", "HIGH")
         if gait_block.get("step_time_s"):

@@ -8,6 +8,7 @@
   "camera_view": "rear",
   "camera_distance_m": null,
   "treadmill_speed_kmh": null,
+  "distance_walked_m": null,
   "body_mass_kg": null,
   "session_date": null,
   "declared_frame_rate": null,

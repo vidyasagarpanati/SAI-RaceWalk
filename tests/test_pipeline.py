@@ -6,6 +6,7 @@ import re
 
 import numpy as np
 import pytest
+from pathlib import Path
 
 import helpers
 import synthetic
@@ -143,3 +144,92 @@ def test_side_view_measures_step_length_and_foot_pitch(tmp_path):
     assert "both.stride.step_length_leg.mean" in m["evidence_index"]
     assert m["stride_stats"]["both"]["loading_knee_min_deg"]["confidence"] in ("MEDIUM", "HIGH")
     assert m["risk"]["ankle_stability"]["level"] == "NOT ASSESSED"      # frontal-only signals
+
+
+def test_speed_from_distance_when_no_treadmill_speed(tmp_path):
+    df, truth = synthetic.build(duration_s=15, view="side")
+    ctx = helpers.make_run(tmp_path / "run", df, truth["fps"],
+                           session={"camera_view": "side_left", "distance_walked_m": 30.0})
+    for st in (s03_kinematics, s04_gait, s05_stats):
+        assert st.run(ctx).passed
+    m = json.loads((ctx.run_dir / "05_metrics.json").read_text())
+    assert m["gait"]["average_speed_kmh"] == pytest.approx(7.2, abs=0.05)
+    assert m["gait"]["speed_source"] == "distance walked over the clip duration (declared distance)"
+    assert m["session"]["speed_kmh"] == pytest.approx(7.2, abs=0.05)
+    assert "gait.pace_min_per_km" in m["evidence_index"]      # unified with the treadmill code path
+
+
+def test_treadmill_speed_takes_priority_over_distance(tmp_path):
+    df, truth = synthetic.build(duration_s=15)
+    ctx = helpers.make_run(tmp_path / "run", df, truth["fps"],
+                           session={"treadmill_speed_kmh": 10.0, "distance_walked_m": 30.0})
+    for st in (s03_kinematics, s04_gait, s05_stats):
+        assert st.run(ctx).passed
+    m = json.loads((ctx.run_dir / "05_metrics.json").read_text())
+    assert m["gait"]["average_speed_kmh"] == 10.0
+    assert m["gait"]["speed_source"] == "treadmill belt speed (declared)"
+
+
+def test_speed_not_provided_without_either_source(tmp_path):
+    df, truth = synthetic.build(duration_s=15)
+    ctx = helpers.make_run(tmp_path / "run", df, truth["fps"])
+    for st in (s03_kinematics, s04_gait, s05_stats):
+        assert st.run(ctx).passed
+    m = json.loads((ctx.run_dir / "05_metrics.json").read_text())
+    assert "gait.average_speed_kmh" not in m["evidence_index"]
+    assert m["gait"].get("average_speed_kmh") is None
+
+
+def test_near_side_dims_far_side_rows_in_side_view(tmp_path):
+    df, truth = synthetic.build(duration_s=15, view="side")
+    ctx = helpers.make_run(tmp_path / "run", df, truth["fps"], session={"camera_view": "side_left"})
+    for st in (s03_kinematics, s04_gait, s05_stats, s06_annotate):
+        assert st.run(ctx).passed
+    assert ctx.near_side == "L"
+    manifest = json.loads((ctx.run_dir / "06_manifest.json").read_text())
+    ref = next(f for f in manifest["frames"] if f["kind"] == "reference" and f["phase"] == "MID_STANCE")
+    from racewalk.steps.s06_annotate import measurement_rows, frame_values
+    from racewalk.framedata import FrameData
+    fd = FrameData.load(ctx.run_dir)
+    vals = frame_values(fd, ref["frame"])
+    rows = measurement_rows(vals, fd, ref["frame"], "sagittal", near_side="L")
+    by_label = {r[0]: r[2] for r in rows}
+    assert by_label["Knee L"] is False and by_label["Elbow L"] is False
+    assert by_label["Knee R"] is True and by_label["Elbow R"] is True and by_label["Hip R"] is True
+
+
+def test_rear_view_does_not_dim_any_row(tmp_path):
+    df, truth = synthetic.build(duration_s=15)
+    ctx = helpers.make_run(tmp_path / "run", df, truth["fps"])   # default camera_view: rear
+    for st in (s03_kinematics, s04_gait, s05_stats, s06_annotate):
+        assert st.run(ctx).passed
+    assert ctx.near_side is None
+    manifest = json.loads((ctx.run_dir / "06_manifest.json").read_text())
+    ref = next(f for f in manifest["frames"] if f["kind"] == "reference" and f["phase"] == "MID_STANCE")
+    from racewalk.steps.s06_annotate import measurement_rows, frame_values
+    from racewalk.framedata import FrameData
+    fd = FrameData.load(ctx.run_dir)
+    vals = frame_values(fd, ref["frame"])
+    rows = measurement_rows(vals, fd, ref["frame"], "frontal", near_side=None)
+    assert all(r[2] is False for r in rows)
+
+
+def test_init_session_distance_flag_and_preserve_on_force(tmp_path, monkeypatch):
+    import subprocess, sys as _sys
+    video = tmp_path / "walk.mp4"
+    video.write_bytes(b"0")
+    sessions_dir = Path(__import__("racewalk").config.find_project_root()) / "sessions"
+    target = sessions_dir / f"{video.stem}.json"
+    if target.exists():
+        target.unlink()
+    from racewalk.cli import main as cli_main
+    assert cli_main(["init-session", "--video", str(video), "--athlete", "Test Walker"]) == 0
+    data = json.loads(target.read_text())
+    assert data["athlete_name"] == "Test Walker" and data.get("distance_walked_m") is None
+    data["camera_view"] = "side_left"      # simulate the operator filling this in by hand
+    target.write_text(json.dumps(data))
+    assert cli_main(["init-session", "--video", str(video), "--distance-m", "42.0", "--force"]) == 0
+    data2 = json.loads(target.read_text())
+    assert data2["distance_walked_m"] == 42.0
+    assert data2["camera_view"] == "side_left"     # preserved, not wiped by --force
+    target.unlink()

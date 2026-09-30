@@ -69,3 +69,14 @@ class Context:
         """frontal (rear or front), sagittal (either side) or oblique."""
         v = self.camera_view
         return "frontal" if v in FRONTAL else "sagittal" if v in SAGITTAL else "oblique"
+
+    @property
+    def near_side(self) -> str | None:
+        """The leg/arm facing the camera in a side view ("L" or "R"), else None.
+        side_left means the athlete's left side faces the camera (session schema)."""
+        v = self.camera_view
+        if v == "side_left":
+            return "L"
+        if v == "side_right":
+            return "R"
+        return None

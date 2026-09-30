@@ -16,8 +16,17 @@ racewalk doctor --llm
 
 1. `racewalk init-session --video "D:\walks\athlete_01.mp4"`
 2. Edit `sessions\athlete_01.json`. **`camera_view` is mandatory and changes what can be claimed.**
-   Add `treadmill_speed_kmh` if you know it (pace and step length depend on it), `body_mass_kg` to scale
-   the generic nutrition line, and `level`. Anything left null is printed as NOT PROVIDED, never assumed.
+   Add `treadmill_speed_kmh` if you know it, `body_mass_kg` to scale the generic nutrition line, and
+   `level`. Anything left null is printed as NOT PROVIDED, never assumed.
+   For overground/track footage there is no belt speed, so speed instead comes from the distance the
+   athlete covered over the whole clip:
+   ```powershell
+   racewalk init-session --video "D:\walks\athlete_01.mp4" --distance-m 42.0 --force
+   ```
+   `--force` on an existing session.json only updates `athlete_name` (if `--athlete` is also given) and
+   `distance_walked_m`; everything you already filled in by hand, like `camera_view`, is preserved.
+   `treadmill_speed_kmh`, if set, always takes priority over `distance_walked_m`. With neither, speed is
+   NOT PROVIDED everywhere: the live overlay, the annotated screenshots, and Section 5 of the report.
 3. `racewalk run --video ... --to S5` and read the numbers before spending GPU time.
 4. `racewalk run --video ...` for the annotated video and the report.
 

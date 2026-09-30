@@ -51,18 +51,26 @@ def _frame_count(path: Path) -> int:
         cap.release()
 
 
-def _live_table(vals: dict, fd: FrameData, i: int, view_class: str) -> list[tuple[str, str]]:
-    def f(key, dec=1, unit="deg"):
+def _live_table(vals: dict, fd: FrameData, i: int, view_class: str,
+                near_side: str | None = None) -> list[tuple[str, str, bool]]:
+    def dim(lg: str) -> bool:
+        return view_class == "sagittal" and near_side is not None and lg != near_side
+
+    def fmt(key, dec=1, unit="deg"):
         return "n/a" if vals.get(key) is None else f"{vals[key]:.{dec}f} {unit}"
-    rows = [("Knee L", f("knee_left_deg")), ("Knee R", f("knee_right_deg")),
-            ("Hip L", f("hip_left_deg")), ("Hip R", f("hip_right_deg"))]
+    rows = [("Knee L", fmt("knee_left_deg"), dim("L")), ("Knee R", fmt("knee_right_deg"), dim("R")),
+            ("Hip L", fmt("hip_left_deg"), dim("L")), ("Hip R", fmt("hip_right_deg"), dim("R")),
+            ("Ankle L", fmt("ankle_left_deg"), dim("L")), ("Ankle R", fmt("ankle_right_deg"), dim("R")),
+            ("Elbow L", fmt("elbow_left_deg"), dim("L")), ("Elbow R", fmt("elbow_right_deg"), dim("R"))]
     if view_class == "frontal":
-        rows.append(("Pelvic tilt", f("pelvic_tilt_deg")))
-    rows += [("Trunk lean" if view_class == "sagittal" else "Trunk tilt", f("trunk_inclination_deg")),
-             ("Pelvic rotation", f("pelvic_yaw_deg"))]
+        rows.append(("Pelvic tilt", fmt("pelvic_tilt_deg"), False))
+    rows += [("Trunk lean" if view_class == "sagittal" else "Trunk tilt", fmt("trunk_inclination_deg"), False),
+             ("Pelvic rotation", fmt("pelvic_yaw_deg"), False)]
     for lg in ("L", "R"):
         h = fd.foot_height(lg, i)
-        rows.append((f"Foot height {lg}", "n/a" if h is None else f"{h:.3f} LL"))
+        rows.append((f"Foot height {lg}", "n/a" if h is None else f"{h:.3f} LL", dim(lg)))
+    speed = ((fd.metrics or {}).get("gait") or {}).get("average_speed_kmh")
+    rows.append(("Speed (avg)", "NOT PROVIDED" if speed is None else f"{speed:.2f} km/h", False))
     return rows
 
 
@@ -72,6 +80,7 @@ def run(ctx: Context) -> StepResult:
     fd = FrameData.load(ctx.run_dir)
     events = fd.metrics["events"]
     view = ctx.view_class
+    near_side = ctx.near_side
     track = float(ctx.cfg.get("quality_gates.landmark_track_confidence", 0.5))
     screen = float(ctx.cfg.phase_rules["screening"]["straight_knee_min_deg"])
     crf = str(ctx.cfg.get("video.output_crf", 20))
@@ -111,8 +120,8 @@ def run(ctx: Context) -> StepResult:
         stride = legs["L"]["stride_id"] or legs["R"]["stride_id"]
         return render(img, pts, fd.vis[i], vals, view_class=view, legs=legs, stride_label=stride,
                       t_s=float(row["t_s"]), frame_idx=i, mode="video", track_conf=track,
-                      measurements=_live_table(vals, fd, i, view), event=banner.get(i), flags=flags,
-                      screen_knee_deg=screen)
+                      measurements=_live_table(vals, fd, i, view, near_side), event=banner.get(i), flags=flags,
+                      screen_knee_deg=screen, near_side=near_side)
 
     if ctx.cfg.get("video.render_full_annotated", True):
         w0 = fd.width

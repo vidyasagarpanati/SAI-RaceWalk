@@ -41,8 +41,16 @@ It is the sibling of the Archery pipeline and keeps its one rule:
 Knee and hip flexion happen in the depth direction of a rear or front camera. From those views the
 straight-leg and contact results are **screens**, and confidence for depth-derived leg angles is capped
 at LOW (oblique MEDIUM, side HIGH). Foot strike and step length are reported only from a side view.
-Pace and step length in metres are reported only if `treadmill_speed_kmh` is in the session file. The
-report never rules on Rule 54: a judge does.
+Pace and step length in metres are reported only if the session file has `treadmill_speed_kmh`, or
+(overground/track footage) `distance_walked_m` — set at session creation with
+`racewalk init-session --distance-m <metres>` — which gives average speed as distance over clip
+duration. Neither is ever estimated from the picture. Average speed, once available, is shown live
+alongside the joint angles in the video and screenshots. The report never rules on Rule 54: a judge
+does.
+
+In a side view (`side_left`/`side_right`), joint angles for the leg/arm facing away from the camera
+(knee, hip, ankle, elbow) are shown dimmed in the live overlay and screenshots, not hidden: the value is
+still measured, just not visually confirmable from that angle.
 
 ## Getting started (Windows, same box as Archery)
 

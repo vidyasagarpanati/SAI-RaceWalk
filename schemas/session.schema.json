@@ -20,7 +20,11 @@
     "camera_distance_m": {"type": ["number", "null"], "exclusiveMinimum": 0},
     "treadmill_speed_kmh": {
       "type": ["number", "null"], "exclusiveMinimum": 0,
-      "description": "Belt speed, or average speed for a measured track segment. Pace and step length are reported ONLY when this is supplied; they are never estimated from the picture."
+      "description": "Belt speed. Pace and step length are reported ONLY when this or distance_walked_m is supplied; they are never estimated from the picture. Takes priority over distance_walked_m if both are set."
+    },
+    "distance_walked_m": {
+      "type": ["number", "null"], "exclusiveMinimum": 0,
+      "description": "Distance the athlete covered over the whole video, in metres, set via `racewalk init-session --distance-m`. Used to compute average speed (distance / clip duration) when treadmill_speed_kmh is not supplied. Never estimated."
     },
     "body_mass_kg": {"type": ["number", "null"], "exclusiveMinimum": 0,
                      "description": "Used only to scale the generic nutrition guidance in Section 8."},

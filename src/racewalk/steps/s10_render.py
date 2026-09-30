@@ -119,11 +119,13 @@ def build_view(ctx: Context, version_label: str) -> tuple[dict, int]:
         if f["kind"] == "event":
             cue = (s01.get(f["event_id"]) or {}).get("coaching_cue")
             canvas, _ = render_key_frame(fd, f, ctx.view_class, coaching=cue, track_conf=track,
-                                         screen_knee_deg=screen, max_w=kmax, event=events_by_id[f["event_id"]])
+                                         screen_knee_deg=screen, max_w=kmax, event=events_by_id[f["event_id"]],
+                                         near_side_param=ctx.near_side)
             ev_frames.setdefault(f["event_id"], []).append(
                 {"t": f["t_s"], "frame": f["frame"], "label": f["label"], "b64": _b64(canvas, max_w, qual)})
         else:
-            canvas, _ = render_key_frame(fd, f, ctx.view_class, track_conf=track, screen_knee_deg=screen, max_w=kmax)
+            canvas, _ = render_key_frame(fd, f, ctx.view_class, track_conf=track, screen_knee_deg=screen, max_w=kmax,
+                                         near_side_param=ctx.near_side)
             ref_frames[f["leg"]].append({"phase": DISPLAY[f["phase"]], "stride": f["stride_id"], "t": f["t_s"],
                                          "frame": f["frame"], "b64": _b64(canvas, max_w, qual)})
         n_img += 1
@@ -187,7 +189,9 @@ def build_view(ctx: Context, version_label: str) -> tuple[dict, int]:
         "Efficiency": NA + " (no energy or force data)"}
     speed_rows = [{"metric": x, "value": speed_vals[x], "reading": sp_ai.get(x, {}).get("reading"),
                    "note": sp_ai.get(x, {}).get("note"), "conf": sp_ai.get(x, {}).get("confidence")} for x in SPEED_ROWS]
-    extra_speed = [("Left step time", _s(ev, "gait.step_time_left_s")), ("Right step time", _s(ev, "gait.step_time_right_s")),
+    extra_speed = [("Average speed", _s(ev, "gait.average_speed_kmh") + (f" ({g.get('speed_source')})" if g.get("speed_source") else "")
+                    if "gait.average_speed_kmh" in ev else "NOT PROVIDED"),
+                   ("Left step time", _s(ev, "gait.step_time_left_s")), ("Right step time", _s(ev, "gait.step_time_right_s")),
                    ("Step-time asymmetry", _s(ev, "asym.step_time.pct")), ("Double support", _s(ev, "gait.double_support_pct")),
                    ("Both feet airborne candidates", _s(ev, "gait.flight_candidates"))]
     # ---- section 6, 7

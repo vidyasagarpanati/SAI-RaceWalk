@@ -231,11 +231,12 @@ def _fmt(v, dec=1, unit=" deg"):
 def render(frame: np.ndarray, pts: np.ndarray, vis: np.ndarray, values: dict, *,
            view_class: str, legs: dict, stride_label: str | None, t_s: float, frame_idx: int,
            mode: str = "key", track_conf: float = 0.5,
-           measurements: list[tuple[str, str]] | None = None,
+           measurements: list[tuple] | None = None,
            observation: str | None = None, coaching: str | None = None,
            extras: dict | None = None, event: dict | None = None,
            focus_leg: str | None = None, screen_knee_deg: float | None = None,
-           flags: list[str] | None = None) -> tuple[np.ndarray, RenderReport]:
+           flags: list[str] | None = None,
+           near_side: str | None = None) -> tuple[np.ndarray, RenderReport]:
     """Annotate one frame.
 
     pts      (33, 2) pixel coordinates, NaN where undetected
@@ -243,6 +244,9 @@ def render(frame: np.ndarray, pts: np.ndarray, vis: np.ndarray, values: dict, *,
     values   measure name -> number (angles in degrees)
     legs     {"L": {"phase": code|None, "contact": bool|None}, "R": {...}}
     event    {"id": int, "display": str, "severity": str} when the frame illustrates a flag
+    near_side  in a side view, the leg/arm facing the camera ("L" or "R"). The far side's
+               joint-angle labels and table rows are dimmed, not removed: the value is still
+               measured, just not visually confirmable from this camera angle.
     mode     "key" draws everything including IDs and the full panel;
              "video" draws a lighter set tuned for motion
     """
@@ -376,19 +380,23 @@ def render(frame: np.ndarray, pts: np.ndarray, vis: np.ndarray, values: dict, *,
     for lg, prefix, label in (("L", "LEFT", "left"), ("R", "RIGHT", "right")):
         q = L.side(prefix)
         ph = (legs.get(lg) or {}).get("phase")
+        far = view_class == "sagittal" and near_side is not None and lg != near_side
         for name, jk, key in (("KNEE", "knee", f"knee_{label}_deg"), ("HIP", "hip", f"hip_{label}_deg"),
                               ("ANKLE", "ankle", f"ankle_{label}_deg")):
             if not present[q[jk]]:
                 continue
             v = values.get(key)
             col = colr[lg]
-            if (name == "KNEE" and screen_knee_deg is not None and v is not None
+            if far:
+                col = tuple(int(c * 0.4) for c in col)
+            elif (name == "KNEE" and screen_knee_deg is not None and v is not None
                     and ph in ("INITIAL_CONTACT", "LOADING", "MID_STANCE") and v < screen_knee_deg):
                 col = RED
             labels.add(pts[q[jk]], f"{lg} {name}: {_fmt(v)}", col)
             n_joint += 1
-        if present[q["elbow"]] and mode == "key":
-            labels.add(pts[q["elbow"]], f"{lg} ELBOW: {_fmt(values.get(f'elbow_{label}_deg'))}", colr[lg], 0.5)
+        if present[q["elbow"]]:
+            col = tuple(int(c * 0.4) for c in colr[lg]) if far else colr[lg]
+            labels.add(pts[q["elbow"]], f"{lg} ELBOW: {_fmt(values.get(f'elbow_{label}_deg'))}", col, 0.5)
             n_joint += 1
     if n_joint:
         rep.did("joint_angle_labels")
@@ -408,7 +416,7 @@ def render(frame: np.ndarray, pts: np.ndarray, vis: np.ndarray, values: dict, *,
     _flag_banner(img, event, flags, s, rep)
 
     canvas = _panel(img, mode, legs, stride_label, t_s, frame_idx, measurements or [], observation,
-                    coaching, rep, s, event, focus_leg)
+                    coaching, rep, s, event, focus_leg, near_side, view_class)
     return canvas, rep
 
 
@@ -500,7 +508,7 @@ def _flag_banner(img, event, flags, s, rep):
 
 
 def _panel(img, mode, legs, stride_label, t_s, frame_idx, measurements, observation, coaching, rep, s,
-           event, focus_leg):
+           event, focus_leg, near_side=None, view_class=None):
     h, w = img.shape[:2]
     pw = max(int(0.46 * h), 380)
     panel = np.full((h, pw, 3), 22, np.uint8)
@@ -525,10 +533,14 @@ def _panel(img, mode, legs, stride_label, t_s, frame_idx, measurements, observat
     line(f"t = {t_s:.3f} s   frame {frame_idx}", GRAY)
     y += int(8 * s)
     line("MEASUREMENT SUMMARY", YELLOW, sc, True)
-    for label, value in measurements:
-        cv2.putText(panel, label, (x, y), FONT, 0.52 * s, GRAY, th, cv2.LINE_AA)
+    for row in measurements:
+        label, value = row[0], row[1]
+        dim = bool(row[2]) if len(row) > 2 else False
+        lab_col = tuple(int(c * 0.55) for c in GRAY) if dim else GRAY
+        val_col = tuple(int(c * 0.5) for c in WHITE) if dim else WHITE
+        cv2.putText(panel, label, (x, y), FONT, 0.52 * s, lab_col, th, cv2.LINE_AA)
         (vw, _), _ = cv2.getTextSize(value, FONT, 0.52 * s, th)
-        cv2.putText(panel, value, (pw - x - vw, y), FONT, 0.52 * s, WHITE, th, cv2.LINE_AA)
+        cv2.putText(panel, value, (pw - x - vw, y), FONT, 0.52 * s, val_col, th, cv2.LINE_AA)
         y += int(26 * s)
     if measurements:
         rep.did("measurement_table")
@@ -548,8 +560,11 @@ def _panel(img, mode, legs, stride_label, t_s, frame_idx, measurements, observat
                 rep.skip(name, "no text supplied")
     y = h - int(118 * s)
     line("LEGEND", GRAY, 0.5 * s, True)
-    for txt, col in (("left leg (orange)   right leg (blue)", WHITE), ("gravity . pelvis . shoulders . trunk", MAGENTA),
-                     ("filled square = foot in contact", WHITE)):
+    legend_lines = [("left leg (orange)   right leg (blue)", WHITE), ("gravity . pelvis . shoulders . trunk", MAGENTA),
+                    ("filled square = foot in contact", WHITE)]
+    if view_class == "sagittal" and near_side is not None:
+        legend_lines.append((f"dim = far side ({'right' if near_side == 'L' else 'left'}), not clearly visible from this angle", GRAY))
+    for txt, col in legend_lines:
         line(txt, col, 0.45 * s)
     canvas = np.hstack([img, panel])
     ch, cw = canvas.shape[:2]

@@ -22,7 +22,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from racewalk.landmarks import ID
+from racewalk import geometry as G
+from racewalk.landmarks import ID, side
 
 FPS = 60.0
 FRAME_W, FRAME_H = 640, 360
@@ -147,6 +148,17 @@ def build(duration_s: float = 30.0, stride_s: float = 0.76, view: str = "rear", 
         if name in ID:
             pts3[:, ID[name]] = arr
 
+    # Ground-truth joint angles, computed directly from the noiseless 3D geometry above,
+    # using the exact same vertex/proximal/distal landmark triples as s03_kinematics.py.
+    # This is what the pipeline's measured angles are validated against.
+    true_angles: dict[str, np.ndarray] = {}
+    for lg, prefix in (("left", "LEFT"), ("right", "RIGHT")):
+        q = side(prefix)
+        true_angles[f"knee_{lg}_deg"] = G.angle_at(pts3[:, q["knee"]], pts3[:, q["hip"]], pts3[:, q["ankle"]])
+        true_angles[f"hip_{lg}_deg"] = G.angle_at(pts3[:, q["hip"]], pts3[:, q["shoulder"]], pts3[:, q["knee"]])
+        true_angles[f"ankle_{lg}_deg"] = G.angle_at(pts3[:, q["ankle"]], pts3[:, q["knee"]], pts3[:, q["foot"]])
+        true_angles[f"elbow_{lg}_deg"] = G.angle_at(pts3[:, q["elbow"]], pts3[:, q["shoulder"]], pts3[:, q["wrist"]])
+
     # projection to normalised image coordinates
     sx = S_Y * FRAME_H / FRAME_W
     if view == "rear":
@@ -185,6 +197,7 @@ def build(duration_s: float = 30.0, stride_s: float = 0.76, view: str = "rear", 
 
     truth = {
         "fps": FPS, "n_frames": n, "view": view, "frame": (FRAME_W, FRAME_H),
+        "true_angles": true_angles,
         "hs_L_s": crossings(uL, 0.0),
         "hs_R_s": crossings(uR, 0.5),
         "to_L_s": crossings(uL, 1 - STANCE_END),

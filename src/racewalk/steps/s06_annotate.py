@@ -47,17 +47,24 @@ def frame_values(fd: FrameData, f: int) -> dict:
             if isinstance(v, (float, np.floating)) and np.isfinite(v)}
 
 
-def measurement_rows(vals: dict, fd: FrameData, f: int, view_class: str) -> list[tuple[str, str]]:
-    rows = [("Knee L", _fmt(vals.get("knee_left_deg"))), ("Knee R", _fmt(vals.get("knee_right_deg"))),
-            ("Hip L", _fmt(vals.get("hip_left_deg"))), ("Hip R", _fmt(vals.get("hip_right_deg"))),
-            ("Ankle L", _fmt(vals.get("ankle_left_deg"))), ("Ankle R", _fmt(vals.get("ankle_right_deg")))]
+def measurement_rows(vals: dict, fd: FrameData, f: int, view_class: str,
+                     near_side: str | None = None) -> list[tuple[str, str, bool]]:
+    def dim(lg: str) -> bool:
+        return view_class == "sagittal" and near_side is not None and lg != near_side
+
+    rows = [("Knee L", _fmt(vals.get("knee_left_deg")), dim("L")), ("Knee R", _fmt(vals.get("knee_right_deg")), dim("R")),
+            ("Hip L", _fmt(vals.get("hip_left_deg")), dim("L")), ("Hip R", _fmt(vals.get("hip_right_deg")), dim("R")),
+            ("Ankle L", _fmt(vals.get("ankle_left_deg")), dim("L")), ("Ankle R", _fmt(vals.get("ankle_right_deg")), dim("R")),
+            ("Elbow L", _fmt(vals.get("elbow_left_deg")), dim("L")), ("Elbow R", _fmt(vals.get("elbow_right_deg")), dim("R"))]
     if view_class == "frontal":
-        rows += [("Pelvic tilt", _fmt(vals.get("pelvic_tilt_deg"))), ("Shoulder tilt", _fmt(vals.get("shoulder_tilt_deg")))]
-    rows.append(("Trunk lean" if view_class == "sagittal" else "Trunk tilt", _fmt(vals.get("trunk_inclination_deg"))))
-    rows.append(("Pelvic rotation (vs median)", _fmt(vals.get("pelvic_yaw_deg"))))
+        rows += [("Pelvic tilt", _fmt(vals.get("pelvic_tilt_deg")), False), ("Shoulder tilt", _fmt(vals.get("shoulder_tilt_deg")), False)]
+    rows.append(("Trunk lean" if view_class == "sagittal" else "Trunk tilt", _fmt(vals.get("trunk_inclination_deg")), False))
+    rows.append(("Pelvic rotation (vs median)", _fmt(vals.get("pelvic_yaw_deg")), False))
     for lg in ("L", "R"):
         h = fd.foot_height(lg, f)
-        rows.append((f"Foot height {lg}", "n/a" if h is None else f"{h:.3f} LL"))
+        rows.append((f"Foot height {lg}", "n/a" if h is None else f"{h:.3f} LL", dim(lg)))
+    speed = ((fd.metrics or {}).get("gait") or {}).get("average_speed_kmh")
+    rows.append(("Speed (avg)", "NOT PROVIDED" if speed is None else f"{speed:.2f} km/h", False))
     return rows
 
 
@@ -84,7 +91,7 @@ def _observation(spec: dict, vals: dict, event: dict | None) -> str:
 
 def render_key_frame(fd: FrameData, spec: dict, view_class: str, coaching: str | None = None,
                      track_conf: float = 0.5, screen_knee_deg: float | None = None,
-                     max_w: int = 1920, event: dict | None = None):
+                     max_w: int = 1920, event: dict | None = None, near_side_param: str | None = None):
     """Render one screenshot. Shared with S10 so the final report can re-render with
     verified coaching text through the identical code path."""
     f = int(spec["frame"])
@@ -113,11 +120,12 @@ def render_key_frame(fd: FrameData, spec: dict, view_class: str, coaching: str |
     canvas, rep = render(frame, pts, fd.vis[f], vals, view_class=view_class, legs=legs,
                          stride_label=spec.get("stride_id"), t_s=float(fd.kin.at[f, "t_s"]), frame_idx=f,
                          mode="key", track_conf=track_conf,
-                         measurements=measurement_rows(vals, fd, f, view_class), observation=obs,
+                         measurements=measurement_rows(vals, fd, f, view_class, near_side_param), observation=obs,
                          coaching=coach, extras=extras,
                          event=({"id": event["id"], "display": EVENT_DISPLAY[event["type"]],
                                  "severity": event["severity"]} if event else None),
-                         focus_leg=spec.get("leg"), screen_knee_deg=screen_knee_deg, flags=flags)
+                         focus_leg=spec.get("leg"), screen_knee_deg=screen_knee_deg, flags=flags,
+                         near_side=near_side_param)
     return canvas, rep
 
 
@@ -183,7 +191,7 @@ def run(ctx: Context) -> StepResult:
     manifest, coverage_gaps, overlaps = [], [], 0
     for sp in specs:
         canvas, rep = render_key_frame(fd, sp, ctx.view_class, track_conf=track, screen_knee_deg=screen, max_w=max_w,
-                                       event=events.get(sp["event_id"]))
+                                       event=events.get(sp["event_id"]), near_side_param=ctx.near_side)
         path = out_dir / sp["file"]
         cv2.imwrite(str(path), canvas, [cv2.IMWRITE_JPEG_QUALITY, q])
         gaps = rep.missing(REQUIRED_KEY_FRAME_ELEMENTS)
